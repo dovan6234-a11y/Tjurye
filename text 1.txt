@@ -1,0 +1,381 @@
+local Players=game:GetService("Players")
+local RunService=game:GetService("RunService")
+local UserInputService=game:GetService("UserInputService")
+local TweenService=game:GetService("TweenService")
+local localPlayer=Players.LocalPlayer
+local playerGui=localPlayer:WaitForChild("PlayerGui")
+local C={bgTop=Color3.fromRGB(92,32,44),bgBottom=Color3.fromRGB(38,14,20),panel=Color3.fromRGB(30,11,16),card=Color3.fromRGB(80,30,40),cardHover=Color3.fromRGB(98,38,50),inner=Color3.fromRGB(52,19,27),accent=Color3.fromRGB(250,90,106),accentDim=Color3.fromRGB(140,56,70),off=Color3.fromRGB(104,76,82),text=Color3.fromRGB(255,250,251),sub=Color3.fromRGB(226,204,209),line=Color3.fromRGB(160,88,100)}
+local MENU={Enabled=true,ToggleKey="RightControl"}
+local function new(cls,p)local o=Instance.new(cls)for k,v in pairs(p)do if k~="Parent"then o[k]=v end end if p.Parent then o.Parent=p.Parent end return o end
+local function corner(o,r)return new("UICorner",{CornerRadius=UDim.new(0,r),Parent=o})end
+local function outline(o,c,t)return new("UIStroke",{Color=c,Transparency=t,Thickness=1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border,Parent=o})end
+local function drawIcon(parent,kind,size)
+local h=new("Frame",{AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromOffset(size,size),BackgroundTransparency=1,Parent=parent})
+local fills,strokes={},{}local full=UDim.new(1,0)local s=size
+local thin=math.max(2,math.floor(s*0.16+0.5))
+local function fill(dx,dy,w,hh,r,rot)
+local f=new("Frame",{AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,dx,0.5,dy),Size=UDim2.fromOffset(w,hh),BorderSizePixel=0,Rotation=rot or 0,Parent=h})
+if r then new("UICorner",{CornerRadius=r,Parent=f})end
+fills[#fills+1]=f
+end
+local function ring(w)
+local f=new("Frame",{AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromOffset(w,w),BackgroundTransparency=1,Parent=h})
+new("UICorner",{CornerRadius=full,Parent=f})
+strokes[#strokes+1]=new("UIStroke",{Thickness=math.max(1,thin-1),Parent=f})
+end
+if kind=="eye"then ring(s*0.85);fill(0,0,s*0.34,s*0.34,full)
+elseif kind=="ring"then ring(s*0.8)
+elseif kind=="diamond"then fill(0,0,s*0.62,s*0.62,UDim.new(0,2),45)
+elseif kind=="dots"then for _,d in ipairs({{-1,-1},{1,-1},{-1,1},{1,1}})do fill(d[1]*s*0.22,d[2]*s*0.22,s*0.32,s*0.32,full)end
+elseif kind=="bars"then for i=-1,1 do fill(0,i*s*0.3,s*0.85,thin,full)end
+elseif kind=="plus"then fill(0,0,s*0.85,thin,full);fill(0,0,thin,s*0.85,full)
+elseif kind=="x"then fill(0,0,s*0.85,thin,full,45);fill(0,0,s*0.85,thin,full,-45)
+elseif kind=="kebab"then for i=-1,1 do fill(0,i*s*0.32,thin+1,thin+1,full)end
+elseif kind=="search"then
+local lens=new("Frame",{AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,-s*0.1,0.5,-s*0.1),Size=UDim2.fromOffset(s*0.58,s*0.58),BackgroundTransparency=1,Parent=h})
+new("UICorner",{CornerRadius=full,Parent=lens})
+strokes[#strokes+1]=new("UIStroke",{Thickness=math.max(1,thin-1),Parent=lens})
+fill(s*0.25,s*0.25,s*0.34,thin,full,45)
+elseif kind=="chevron"then fill(-s*0.16,0,s*0.5,thin,full,45);fill(s*0.16,0,s*0.5,thin,full,-45)
+else fill(0,0,s*0.5,s*0.5,full)end
+return function(color)for _,p in ipairs(fills)do p.BackgroundColor3=color end;for _,st in ipairs(strokes)do st.Color=color end end
+end
+local LOGO_BG=Color3.fromRGB(8,6,12)
+local CRYSTAL_RIM=Color3.fromRGB(226,216,255)
+local CRYSTAL_TOP=Color3.fromRGB(176,156,248)
+local CRYSTAL_BOTTOM=Color3.fromRGB(112,90,204)
+local function drawLogoMark(square,size)
+local markSize=math.floor(size*0.52+0.5)
+local rim=math.max(1,math.floor(size*0.025+0.5))
+local gap=rim*2+math.max(1,math.floor(size*0.025+0.5))
+local tile=(markSize-gap)/2
+local mark=new("Frame",{AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromOffset(markSize,markSize),Rotation=45,BackgroundTransparency=1,Parent=square})
+mark:SetAttribute("KeepColor",true)
+for row=0,1 do
+for column=0,1 do
+local c=math.max(1,math.floor(size*0.03))
+local piece=new("Frame",{Position=UDim2.fromOffset(column*(tile+gap),row*(tile+gap)),Size=UDim2.fromOffset(tile,tile),BackgroundColor3=Color3.new(1,1,1),BackgroundTransparency=0.25,BorderSizePixel=0,Parent=mark})
+corner(piece,c)
+piece:SetAttribute("KeepColor",true)
+new("UIGradient",{Rotation=45,Color=ColorSequence.new(CRYSTAL_TOP,CRYSTAL_BOTTOM),Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,0.1),NumberSequenceKeypoint.new(0.5,0.45),NumberSequenceKeypoint.new(1,0.6)}),Parent=piece})
+local st=new("UIStroke",{Color=CRYSTAL_RIM,Thickness=rim,Transparency=0.1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border,Parent=piece})
+st:SetAttribute("KeepColor",true)
+local gloss=new("Frame",{Size=UDim2.fromScale(1,1),BackgroundColor3=Color3.new(1,1,1),BackgroundTransparency=0.45,BorderSizePixel=0,Parent=piece})
+corner(gloss,c)
+gloss:SetAttribute("KeepColor",true)
+new("UIGradient",{Rotation=45,Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,0.2),NumberSequenceKeypoint.new(0.42,0.75),NumberSequenceKeypoint.new(0.45,1),NumberSequenceKeypoint.new(1,1)}),Parent=gloss})
+end
+end
+return mark
+end
+local screenGui=new("ScreenGui",{Name="Lavon",ZIndexBehavior=Enum.ZIndexBehavior.Sibling,ResetOnSpawn=false,DisplayOrder=100,Enabled=false,Parent=playerGui})
+local frame=new("Frame",{Name="Window",AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromOffset(600,400),BackgroundTransparency=1,BorderSizePixel=0,ClipsDescendants=true,Parent=screenGui})
+corner(frame,12)
+outline(frame,C.line,0.35)
+local windowBackground=new("Frame",{Size=UDim2.fromScale(1,1),BackgroundColor3=Color3.fromRGB(255,255,255),BackgroundTransparency=0.04,BorderSizePixel=0,ZIndex=0,Parent=frame})
+corner(windowBackground,12)
+new("UIGradient",{Color=ColorSequence.new(C.bgTop,C.bgBottom),Rotation=55,Parent=windowBackground})
+local topBar=new("Frame",{Size=UDim2.new(1,0,0,48),BackgroundTransparency=1,Parent=frame})
+new("Frame",{Position=UDim2.new(0,0,1,-1),Size=UDim2.new(1,0,0,1),BackgroundColor3=C.line,BackgroundTransparency=0.6,BorderSizePixel=0,Parent=topBar})
+local logo=new("Frame",{Position=UDim2.fromOffset(14,11),Size=UDim2.fromOffset(26,26),BackgroundColor3=LOGO_BG,BorderSizePixel=0,Parent=topBar})
+corner(logo,6)
+outline(logo,C.line,0.5)
+drawLogoMark(logo,26)
+new("TextLabel",{Position=UDim2.fromOffset(48,0),Size=UDim2.fromOffset(144,48),BackgroundTransparency=1,Font=Enum.Font.GothamBlack,TextSize=16,TextColor3=C.text,Text="Lavon",TextXAlignment=Enum.TextXAlignment.Left,Parent=topBar})
+local dragging,dragStart,startPos
+topBar.InputBegan:Connect(function(input)
+if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then
+dragging=true;dragStart=input.Position;startPos=frame.Position
+input.Changed:Connect(function()if input.UserInputState==Enum.UserInputState.End then dragging=false end end)
+end
+end)
+UserInputService.InputChanged:Connect(function(input)
+if dragging and(input.UserInputType==Enum.UserInputType.MouseMovement or input.UserInputType==Enum.UserInputType.Touch)then
+local d=input.Position-dragStart
+frame.Position=UDim2.new(startPos.X.Scale,startPos.X.Offset+d.X,startPos.Y.Scale,startPos.Y.Offset+d.Y)
+end
+end)
+local sidebar=new("Frame",{Position=UDim2.fromOffset(0,48),Size=UDim2.new(0,150,1,-48),BackgroundColor3=C.panel,BackgroundTransparency=0.45,BorderSizePixel=0,Parent=frame})
+corner(sidebar,12)
+local sidebarList=new("Frame",{Size=UDim2.new(1,0,1,-30),BackgroundTransparency=1,Parent=sidebar})
+new("UIPadding",{PaddingTop=UDim.new(0,10),PaddingLeft=UDim.new(0,8),PaddingRight=UDim.new(0,9),Parent=sidebarList})
+new("UIListLayout",{Padding=UDim.new(0,2),SortOrder=Enum.SortOrder.LayoutOrder,Parent=sidebarList})
+local groups={}
+local header=new("TextButton",{LayoutOrder=1,Size=UDim2.new(1,0,0,32),BackgroundColor3=C.accentDim,BackgroundTransparency=0.35,AutoButtonColor=false,Text="",Parent=sidebarList})
+corner(header,7)
+local ih=new("Frame",{Position=UDim2.new(0,8,0.5,-9),Size=UDim2.fromOffset(18,18),BackgroundTransparency=1,Parent=header})
+drawIcon(ih,"diamond",14)(C.accent)
+new("TextLabel",{Position=UDim2.fromOffset(32,0),Size=UDim2.new(1,-52,1,0),BackgroundTransparency=1,Font=Enum.Font.GothamBold,TextSize=14,TextXAlignment=Enum.TextXAlignment.Left,TextColor3=C.text,Text="Modules",Parent=header})
+local list=new("Frame",{LayoutOrder=2,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y,BackgroundTransparency=1,Parent=sidebarList})
+new("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder,Parent=list})
+new("UIPadding",{PaddingBottom=UDim.new(0,8),Parent=list})
+local content=new("Frame",{Position=UDim2.fromOffset(162,48),Size=UDim2.new(1,-174,1,-58),BackgroundTransparency=1,Parent=frame})
+local sections={}
+local currentSection=nil
+local currentModule=nil
+local uiRefreshers={}
+local function makeScroller(name)
+local sc=new("ScrollingFrame",{Name=name,Position=UDim2.fromOffset(0,10),Size=UDim2.new(1,0,1,-10),CanvasSize=UDim2.new(),AutomaticCanvasSize=Enum.AutomaticSize.Y,ScrollingDirection=Enum.ScrollingDirection.Y,ScrollBarThickness=3,ScrollBarImageColor3=C.accent,BackgroundTransparency=1,BorderSizePixel=0,Visible=false,Parent=content})
+new("UIPadding",{PaddingRight=UDim.new(0,7),Parent=sc})
+new("UIGridLayout",{CellSize=UDim2.new(0.5,-5,0,66),CellPadding=UDim2.fromOffset(10,10),SortOrder=Enum.SortOrder.LayoutOrder,Parent=sc})
+return sc
+end
+local function createSection(name)
+local nav=new("TextButton",{LayoutOrder=1,Size=UDim2.new(1,0,0,28),BackgroundTransparency=1,AutoButtonColor=false,Text="",Parent=list})
+local pill=new("Frame",{Position=UDim2.fromOffset(24,3),Size=UDim2.new(1,-24,1,-6),BackgroundColor3=C.accentDim,BackgroundTransparency=0.6,BorderSizePixel=0,Visible=false,Parent=nav})
+corner(pill,6)
+local ih2=new("Frame",{Position=UDim2.new(0,28,0.5,-7),Size=UDim2.fromOffset(14,14),BackgroundTransparency=1,Parent=nav})
+local setIcon=drawIcon(ih2,"diamond",11)
+setIcon(C.sub)
+local label=new("TextLabel",{Position=UDim2.fromOffset(48,0),Size=UDim2.new(1,-48,1,0),BackgroundTransparency=1,Font=Enum.Font.Gotham,TextSize=14,TextXAlignment=Enum.TextXAlignment.Left,TextColor3=C.sub,Text=name,Parent=nav})
+local grid=makeScroller(name.."_Grid")
+sections[name]={grid=grid,cards={},nav={setIcon=setIcon,label=label,pill=pill}}
+nav.MouseButton1Click:Connect(function()
+currentSection=name
+for sName,sData in pairs(sections)do
+local active=sName==name
+sData.nav.setIcon(active and C.accent or C.sub)
+sData.nav.label.TextColor3=active and C.text or C.sub
+sData.nav.pill.Visible=active
+sData.grid.Visible=active
+end
+if currentModule then currentModule.page.Visible=false;currentModule=nil end
+end)
+return sections[name]
+end
+local function settingRow(page,labelText,height)
+local row=new("Frame",{LayoutOrder=#page:GetChildren(),Size=UDim2.new(1,0,0,height),BackgroundColor3=C.card,BackgroundTransparency=0.2,BorderSizePixel=0,Parent=page})
+corner(row,8)
+outline(row,C.line,0.7)
+new("TextLabel",{Position=UDim2.fromOffset(12,0),Size=UDim2.new(1,-140,0,38),BackgroundTransparency=1,Font=Enum.Font.GothamBold,TextSize=14,TextXAlignment=Enum.TextXAlignment.Left,TextColor3=C.text,Text=labelText,Parent=row})
+return row
+end
+local function toggleSetting(page,labelText,key,source)
+local row=settingRow(page,labelText,38)
+local pill=new("Frame",{Position=UDim2.new(1,-50,0.5,-9),Size=UDim2.fromOffset(36,18),BackgroundColor3=C.off,BorderSizePixel=0,Parent=row})
+corner(pill,9)
+local knob=new("Frame",{AnchorPoint=Vector2.new(0,0.5),Position=UDim2.new(0,2,0.5,0),Size=UDim2.fromOffset(14,14),BackgroundColor3=C.text,BorderSizePixel=0,Parent=pill})
+corner(knob,7)
+local button=new("TextButton",{Size=UDim2.fromScale(1,1),BackgroundTransparency=1,Text="",Parent=row})
+local function refresh()
+local on=source[key]
+pill.BackgroundColor3=on and C.accent or C.off
+TweenService:Create(knob,TweenInfo.new(0.14),{Position=on and UDim2.new(1,-16,0.5,0) or UDim2.new(0,2,0.5,0)}):Play()
+end
+button.MouseButton1Click:Connect(function()source[key]=not source[key];refresh()end)
+refresh()
+table.insert(uiRefreshers,refresh)
+end
+local windowScale=new("UIScale",{Scale=1,Parent=frame})
+local menuOpen=false
+local animationId=0
+local WINDOW_SIZE=Vector2.new(600,400)
+local TOTAL_TIME=0.79
+local shardLayer=new("Frame",{Name="ShardLayer",AnchorPoint=Vector2.new(0.5,0.5),Size=UDim2.fromOffset(WINDOW_SIZE.X,WINDOW_SIZE.Y),BackgroundTransparency=1,Visible=false,ZIndex=5,Parent=screenGui})
+local shardScale=new("UIScale",{Parent=shardLayer})
+local shardPieces={}
+local shardConnection=nil
+local function clearShards()
+if shardConnection then shardConnection:Disconnect();shardConnection=nil end
+for _,piece in ipairs(shardPieces)do piece.shard:Destroy()end
+table.clear(shardPieces)
+shardLayer.Visible=false
+end
+local function makeSnapshot()
+local snapshot=Instance.new("Frame")
+snapshot.Size=UDim2.fromOffset(WINDOW_SIZE.X,WINDOW_SIZE.Y)
+snapshot.BackgroundTransparency=1;snapshot.BorderSizePixel=0
+for _,child in ipairs(frame:GetChildren())do
+if not child:IsA("UIScale")then
+local ok,copy=pcall(function()return child:Clone()end)
+if ok and copy then copy.Parent=snapshot end
+end
+end
+for _,d in ipairs(snapshot:GetDescendants())do if d.Parent and d:IsA("GuiObject")and not d.Visible then d:Destroy()end end
+return snapshot
+end
+local function applyShard(piece,tau)
+local t=math.max(0,tau-piece.delay)
+local crack=math.clamp(t/0.12,0,1)
+local fly=math.max(0,t-0.12)
+local flyProgress=math.clamp(fly/0.6,0,1)
+local offset=piece.direction*5*crack+piece.velocity*fly+Vector2.new(0,0.5*900*fly*fly)
+piece.shard.Position=UDim2.fromOffset(piece.home.X+offset.X,piece.home.Y+offset.Y)
+piece.shard.Rotation=piece.crackRotation*crack+piece.spin*fly
+piece.depth.Scale=1-(1-piece.farScale)*flyProgress
+piece.edge.Transparency=1-0.75*crack
+piece.shard.GroupTransparency=math.clamp((flyProgress-0.35)/0.65,0,1)
+end
+local function createShards()
+clearShards()
+shardLayer.Position=frame.Position
+shardScale.Scale=windowScale.Scale
+shardLayer.Visible=true
+local snapshot=makeSnapshot()
+for col=1,2 do
+local x0=(col-1)*300;local x1=col*300
+local home=Vector2.new(x0+150,200)
+local shard=Instance.new("CanvasGroup")
+shard.AnchorPoint=Vector2.new(0.5,0.5)
+shard.Position=UDim2.fromOffset(home.X,home.Y)
+shard.Size=UDim2.fromOffset(300,400)
+shard.BackgroundTransparency=1;shard.Parent=shardLayer
+local copy=snapshot:Clone();copy.Position=UDim2.fromOffset(-x0,0);copy.Parent=shard
+local edge=Instance.new("UIStroke");edge.Color=C.accent;edge.Thickness=1.5;edge.Transparency=1;edge.Parent=shard
+local depth=Instance.new("UIScale");depth.Parent=shard
+local direction=home-Vector2.new(300,200);direction=direction.Magnitude>1 and direction.Unit or Vector2.new(0,-1)
+table.insert(shardPieces,{shard=shard,edge=edge,depth=depth,home=home,direction=direction,crackRotation=(math.random()-0.5)*5,velocity=direction*(260+math.random()*80)+Vector2.new(0,-40-math.random()*60),spin=(direction.X<0 and-1 or 1)*(25+math.random()*20),farScale=0.3+math.random()*0.25,delay=math.random()*0.07})
+end
+end
+local function openMenu()
+animationId+=1;local id=animationId;menuOpen=true
+local a=screenGui.AbsoluteSize
+if a.X>1 and a.Y>1 then windowScale.Scale=math.clamp(math.min((a.X-48)/600,(a.Y-48)/400),0.45,1)end
+frame.Visible=false;screenGui.Enabled=true;createShards()
+for _,piece in ipairs(shardPieces)do applyShard(piece,TOTAL_TIME)end
+local started=os.clock()
+shardConnection=RunService.RenderStepped:Connect(function()
+local u=math.clamp((os.clock()-started)/0.6,0,1);local tau=TOTAL_TIME*(1-u)^2
+for _,piece in ipairs(shardPieces)do applyShard(piece,tau)end
+if u>=1 then clearShards();if animationId==id then frame.Visible=true end end
+end)
+end
+local function closeMenu()
+animationId+=1;local id=animationId;menuOpen=false;createShards();frame.Visible=false
+local started=os.clock()
+shardConnection=RunService.RenderStepped:Connect(function()
+local tau=os.clock()-started
+for _,piece in ipairs(shardPieces)do applyShard(piece,tau)end
+if tau>=TOTAL_TIME then clearShards();if animationId==id then screenGui.Enabled=false;frame.Visible=true end end
+end)
+end
+UserInputService.InputBegan:Connect(function(input,gp)
+if gp then return end
+if input.UserInputType==Enum.UserInputType.Keyboard and input.KeyCode.Name==MENU.ToggleKey then
+if menuOpen then closeMenu()else openMenu()end
+end
+end)
+openMenu()
+local MF = { PlayerESP = { Enabled = false } }
+
+local function addModule(section, def)
+    local card = new("TextButton", { LayoutOrder = #section.cards + 1, BackgroundColor3 = C.card, BackgroundTransparency = 0.05, BorderSizePixel = 0, AutoButtonColor = false, Text = "", Parent = section.grid })
+    corner(card, 8)
+    local cardStroke = outline(card, C.line, 0.65)
+    local cardScale = new("UIScale", { Parent = card })
+    new("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.fromRGB(255,255,255), Color3.fromRGB(205,205,205)), Parent = card })
+    
+    local switch = new("Frame", { AnchorPoint = Vector2.new(1,0), Position = UDim2.new(1,-10,0,11), Size = UDim2.fromOffset(30,16), BackgroundColor3 = C.off, BorderSizePixel = 0, Parent = card })
+    corner(switch, 8)
+    local switchKnob = new("Frame", { AnchorPoint = Vector2.new(0,0.5), Position = UDim2.new(0,2,0.5,0), Size = UDim2.fromOffset(12,12), BackgroundColor3 = C.text, BorderSizePixel = 0, Parent = switch })
+    corner(switchKnob, 6)
+    
+    local icon = new("Frame", { Position = UDim2.fromOffset(10,8), Size = UDim2.fromOffset(22,22), BackgroundColor3 = C.accentDim, BorderSizePixel = 0, Parent = card })
+    corner(icon, 6)
+    local setIcon = drawIcon(icon, "eye", 12)
+    
+    local title = new("TextLabel", { Position = UDim2.fromOffset(40,8), Size = UDim2.new(1,-88,0,22), BackgroundTransparency = 1, Font = Enum.Font.GothamBold, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, TextColor3 = C.text, Text = def.name, Parent = card })
+    local descLabel = new("TextLabel", { Position = UDim2.fromOffset(12,32), Size = UDim2.new(1,-24,0,28), BackgroundTransparency = 1, Font = Enum.Font.Gotham, TextSize = 12, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextColor3 = C.sub, Text = def.desc, Parent = card })
+    
+    local function refresh()
+        local on = def.source[def.key]
+        icon.BackgroundColor3 = on and C.accent or C.accentDim
+        icon.BackgroundTransparency = on and 0 or 0.25
+        setIcon(on and C.text or C.sub)
+        cardStroke.Color = on and C.accent or C.line
+        cardStroke.Transparency = on and 0.3 or 0.65
+        switch.BackgroundColor3 = on and C.accent or C.off
+        TweenService:Create(switchKnob, TweenInfo.new(0.16, Enum.EasingStyle.Quad), { Position = on and UDim2.new(1,-14,0.5,0) or UDim2.new(0,2,0.5,0) }):Play()
+    end
+    
+    local function toggle()
+        def.source[def.key] = not def.source[def.key]
+        refresh()
+    end
+    
+    card.MouseButton1Click:Connect(toggle)
+    refresh()
+    table.insert(uiRefreshers, refresh)
+    section.cards[#section.cards + 1] = { frame = card, name = def.name, desc = def.desc }
+end
+
+local combatSection = createSection("Visuals")
+addModule(combatSection, { name = "Player ESP", desc = "Аватарка, ник и дистанция.", source = MF.PlayerESP, key = "Enabled" })
+selectSection("Visuals")
+
+local espBillboards = {}
+RunService.RenderStepped:Connect(function()
+    if not MF.PlayerESP.Enabled then
+        for _, bb in pairs(espBillboards) do if bb then bb:Destroy() end end
+        table.clear(espBillboards)
+        return
+    end
+    
+    local myHRP = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= localPlayer and plr.Character then
+            local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+            local head = plr.Character:FindFirstChild("Head")
+            if hrp and head then
+                if not espBillboards[plr] or not espBillboards[plr].Parent then
+                    local bb = Instance.new("BillboardGui")
+                    bb.Name = "Lavon_ESP"
+                    bb.Adornee = head
+                    bb.Size = UDim2.new(0,150,0,60)
+                    bb.StudsOffset = Vector3.new(0,2.5,0)
+                    bb.AlwaysOnTop = true
+                    bb.Parent = plr.Character
+                    
+                    local av = Instance.new("ImageLabel")
+                    av.Size = UDim2.new(0,36,0,36)
+                    av.Position = UDim2.new(0.5,-18,0,0)
+                    av.BackgroundTransparency = 1
+                    av.Parent = bb
+                    corner(av,18)
+                    outline(av,C.accent,0.2)
+                    
+                    task.spawn(function()
+                        local ok,img = pcall(function() return Players:GetUserThumbnailAsync(plr.UserId,Enum.ThumbnailType.HeadShot,Enum.ThumbnailSize.Size100x100) end)
+                        if ok and av.Parent then av.Image = img end
+                    end)
+                    
+                    local txt = Instance.new("TextLabel")
+                    txt.Size = UDim2.new(1,0,0,14)
+                    txt.Position = UDim2.new(0,0,0,38)
+                    txt.BackgroundTransparency = 1
+                    txt.TextColor3 = C.accent
+                    txt.TextStrokeTransparency = 0
+                    txt.Font = Enum.Font.GothamBold
+                    txt.TextSize = 12
+                    txt.Text = plr.Name
+                    txt.Parent = bb
+                    
+                    local dist = Instance.new("TextLabel")
+                    dist.Size = UDim2.new(1,0,0,12)
+                    dist.Position = UDim2.new(0,0,0,50)
+                    dist.BackgroundTransparency = 1
+                    dist.TextColor3 = Color3.new(1,1,1)
+                    dist.TextStrokeTransparency = 0
+                    dist.Font = Enum.Font.Gotham
+                    dist.TextSize = 11
+                    dist.Parent = bb
+                    
+                    espBillboards[plr] = bb
+                end
+                
+                if myHRP then
+                    local mag = math.floor((myHRP.Position - hrp.Position).Magnitude)
+                    local bb = espBillboards[plr]
+                    if bb and bb.Parent then
+                        for _, child in ipairs(bb:GetChildren()) do
+                            if child:IsA("TextLabel") and child.Position.Y.Offset == 50 then
+                                child.Text = "[" .. mag .. " studs]"
+                                break
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
